@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e13">
+<title>TradeX — Binary Trading</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="topbar-inner">
+    <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+    <a class="logo" href="#/home">Trade<b>X</b></a>
+    <div class="mode-seg" id="mode-seg" role="group" aria-label="Trading mode" hidden>
+      <button type="button" data-mode="real" class="active">Real</button>
+      <button type="button" data-mode="demo">Demo</button>
+    </div>
+    <nav id="asset-tabs" aria-label="Assets"></nav>
+    <div id="bal-pill" hidden></div>
+    <div id="auth-area"></div>
+  </div>
+</header>
+<div id="stale-banner" class="banner danger" hidden>PRICE FEED STALE — betting paused</div>
+<div id="demo-banner" class="banner warn" hidden>DEMO MODE — paper trading with fake credits. Switch to Real to trade with real funds.</div>
+
+<main id="app"></main>
+
+<nav id="bottomnav">
+  <a href="#/trade"><span class="ico">&#9650;</span><span>Trade</span></a>
+  <a href="#/trade" data-goto="positions"><span class="ico">&#9776;</span><span>Positions</span></a>
+  <a href="#/history"><span class="ico">&#9719;</span><span>History</span></a>
+  <a href="#/wallet"><span class="ico">&#11042;</span><span>Wallet</span></a>
+  <button data-goto="menu"><span class="ico">&#9776;</span><span>Menu</span></button>
+</nav>
+
+<div id="drawer" hidden></div>
+
+<div id="dlbanner" hidden>
+  <span>Trade on the go — get the TradeX app</span>
+  <a href="/app.apk" download>Download App</a>
+  <button id="dlbanner-x" aria-label="Dismiss">&times;</button>
+</div>
+
+<div id="toast"></div>
+<div id="modal-root"></div>
+
+<script src="chart.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
