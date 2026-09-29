@@ -57,7 +57,12 @@ app.get('/api/feed/stream', (req, res) => {
 });
 
 // Static frontend (includes /app.apk placeholder for the mobile download banner)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// HTML is never cached so deploys take effect immediately; versioned assets cache normally.
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 feed.start(db);
 trading.startSettler(db, feed);
