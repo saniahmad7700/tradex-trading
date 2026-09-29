@@ -1,4 +1,5 @@
 /* TradeX — dark broker theme, mobile-first. All original CSS. */
+[hidden]{display:none!important}
 :root{
   --bg:#0b0e13;
   --panel:#11161e;
