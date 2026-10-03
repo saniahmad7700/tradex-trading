@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0e13">
+<meta name="theme-color" content="#04070d">
 <title>TradeX — Binary Trading</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +11,12 @@
 <header id="topbar">
   <div class="topbar-inner">
     <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
-    <a class="logo" href="#/home">Trade<b>X</b></a>
+    <a class="logo" href="#/home"><span class="logo-mark">TX</span>Trade<b>X</b></a>
+    <nav class="desk-nav" aria-label="Primary">
+      <a href="#/trade">Trade</a>
+      <a href="#/history">History</a>
+      <a href="#/wallet">Wallet</a>
+    </nav>
     <div class="mode-seg" id="mode-seg" role="group" aria-label="Trading mode" hidden>
       <button type="button" data-mode="real" class="active">Real</button>
       <button type="button" data-mode="demo">Demo</button>
@@ -19,6 +24,7 @@
     <nav id="asset-tabs" aria-label="Assets"></nav>
     <div id="bal-pill" hidden></div>
     <div id="auth-area"></div>
+    <span class="live-dot" title="Live"></span>
   </div>
 </header>
 <div id="stale-banner" class="banner danger" hidden>PRICE FEED STALE — betting paused</div>
@@ -45,7 +51,7 @@
 <div id="toast"></div>
 <div id="modal-root"></div>
 
-<script src="chart.js?v=20260929c"></script>
-<script src="app.js?v=20260929c"></script>
+<script src="chart.js?v=20261003"></script>
+<script src="app.js?v=20261003"></script>
 </body>
 </html>

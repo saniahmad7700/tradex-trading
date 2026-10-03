@@ -33,6 +33,17 @@ function fmtMMSS(ms){
 }
 function shortSym(sym){ return String(sym || '').replace(/USDT$/i, ''); }
 
+/* Coin badge icon for asset tabs / ticker cards / panel headers.
+ * Purely decorative — no behavior hooks. */
+function coinBadge(sym){
+  const s = String(sym || '').toUpperCase();
+  if(s.indexOf('BTC') === 0) return '<span class="coin-badge cb-btc">\u20BF</span>';
+  if(s.indexOf('ETH') === 0) return '<span class="coin-badge cb-eth">\u039E</span>';
+  if(s.indexOf('BNB') === 0) return '<span class="coin-badge cb-bnb">B</span>';
+  const ch = shortSym(sym).charAt(0).toUpperCase() || '?';
+  return '<span class="coin-badge cb-def">' + esc(ch) + '</span>';
+}
+
 let toastTimer;
 function toast(msg){
   const t = document.getElementById('toast');
@@ -254,9 +265,10 @@ function renderAssetTabs(){
     b.dataset.sym = a.symbol;
     const chg = Number(a.change24h) || 0;
     b.innerHTML =
-      '<div class="sym">' + esc(a.label || shortSym(a.symbol)) + '/USDT</div>' +
+      coinBadge(a.symbol) +
+      '<div><div class="sym">' + esc(a.label || shortSym(a.symbol)) + '/USDT</div>' +
       '<div class="px num">' + esc(fmt(a.price)) + '</div>' +
-      '<div class="chg num ' + (chg >= 0 ? 'pos' : 'neg') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div>';
+      '<div class="chg num ' + (chg >= 0 ? 'pos' : 'neg') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div></div>';
     b.addEventListener('click', () => selectAsset(a.symbol));
     nav.appendChild(b);
   });
@@ -685,12 +697,17 @@ async function viewTrade(el){
   const aLabel = a ? (a.label || shortSym(selectedAsset)) : shortSym(selectedAsset);
   el.innerHTML =
     '<div class="trade-layout">' +
-    '<div class="chart-wrap"><canvas id="chart"></canvas></div>' +
+    '<div class="chart-wrap"><div class="chart-head"><span class="chart-sym">' + esc(aLabel) + '/USDT</span><span class="chart-live num" id="chart-live"></span></div><canvas id="chart"></canvas></div>' +
     '<aside class="trade-panel">' +
-      '<h3 style="margin-top:0">' + esc(aLabel) + '/USDT <span class="muted" id="panel-price"></span></h3>' +
+      '<div class="tp-head">' + coinBadge(selectedAsset) +
+        '<div class="tp-title"><h3>' + esc(aLabel) + '/USDT</h3><span class="muted num" id="panel-price"></span></div>' +
+        '<span class="live-dot sm"></span>' +
+      '</div>' +
+      '<div class="tp-label">Contract length</div>' +
       '<div class="tf-row">' + TF_OPTS.map(tf =>
         '<button class="tf-pill' + (tf === timeframe ? ' active' : '') + '" data-tf="' + tf + '">' + TF_LABEL[tf] + '</button>'
       ).join('') + '</div>' +
+      '<div class="tp-label">Stake amount (USDT)</div>' +
       '<div class="amt-row">' +
         '<input class="amt-input num" id="trade-amount" type="number" min="1" step="1" value="' + amountVal + '" inputmode="decimal">' +
         [10, 25, 50, 100].map(v => '<button class="chip" data-amt="' + v + '">' + v + '</button>').join('') +
@@ -722,6 +739,12 @@ async function viewTrade(el){
     const pe = document.getElementById('panel-price');
     const av = feed.assets.get(selectedAsset);
     if(pe && av) pe.textContent = fmt(av.price) + ' USDT';
+    const ce = document.getElementById('chart-live');
+    if(ce && av && av.price > 0){
+      const chg = Number(av.change24h) || 0;
+      ce.innerHTML = fmt(av.price) + ' &nbsp;<span class="' + (chg >= 0 ? 'tk-up' : 'tk-dn') + '">' +
+        (chg >= 0 ? '\u25B2 +' : '\u25BC ') + chg.toFixed(2) + '%</span>';
+    }
   }, 500);
   el._cleanup = () => clearInterval(priceTick);
 
@@ -964,17 +987,19 @@ function viewLanding(el){
     const px = a && a.price > 0 ? fmt(a.price) : '—';
     const chg = a && typeof a.change24h === 'number' ? a.change24h : null;
     const cls = chg == null ? '' : (chg >= 0 ? 'tk-up' : 'tk-dn');
-    return '<div class="ticker-item"><div class="tk-sym">' + esc(shortSym(sym)) + ' / USDT</div>' +
+    return '<div class="ticker-item"><div class="tk-top">' + coinBadge(sym) +
+      '<div class="tk-sym">' + esc(shortSym(sym)) + ' / USDT</div></div>' +
       '<div class="tk-px num" data-tk-px="' + sym + '">' + px + '</div>' +
-      '<div class="' + cls + ' num" data-tk-chg="' + sym + '" style="font-size:.78rem;font-weight:700">' +
-      (chg == null ? '&nbsp;' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '% 24h') + '</div></div>';
+      '<div class="tk-chg ' + cls + ' num" data-tk-chg="' + sym + '">' +
+      (chg == null ? '&nbsp;' : (chg >= 0 ? '\u25B2 +' : '\u25BC ') + chg.toFixed(2) + '% 24h') + '</div></div>';
   }).join('');
 
   el.innerHTML =
   '<div class="landing">' +
     '<section class="hero">' +
-      '<span class="hero-badge">LIVE BINARY TRADING</span>' +
-      '<h1 class="hero-title">Predict the market.<br>Profit in <span class="hl-up">30 seconds</span>.</h1>' +
+      '<div class="hero-eyebrow">Market Dashboard</div>' +
+      '<span class="hero-badge">Live binary trading</span>' +
+      '<h1 class="hero-title">Predict the market.<br>Profit in <span class="hl-gold">30 seconds</span>.</h1>' +
       '<p class="hero-sub">Will BTC go <b class="hl-up">UP</b> or <b class="hl-dn">DOWN</b>? ' +
       'Pick a direction, set your amount, and win up to <b>1.9x</b> on every correct prediction.</p>' +
       '<div class="cta-row">' +
@@ -989,7 +1014,7 @@ function viewLanding(el){
       '<div class="step-card"><span class="step-num">2</span><h4>Pick UP or DOWN</h4><p>Choose BTC, ETH or BNB, set your amount and timeframe — 30 seconds, 1 minute or 5 minutes.</p></div>' +
       '<div class="step-card"><span class="step-num">3</span><h4>Win up to 1.9x</h4><p>If the price moves your way when time expires, you win. Payout is credited instantly to your wallet.</p></div>' +
     '</div>' +
-    '<h2 class="sec-title">Why TradeX</h2>' +
+    '<h2 class="sec-title">Why <span class="gold">TradeX</span></h2>' +
     '<div class="feat-grid">' +
       '<div class="feat-card"><div class="feat-ico">◫</div><h4>Pro live charts</h4><p>Real-time candlestick charts with a live price feed, built for fast decisions.</p></div>' +
       '<div class="feat-card"><div class="feat-ico">◈</div><h4>Free demo mode</h4><p>Practice risk-free with 1,000 demo credits inside your account before trading real.</p></div>' +
@@ -1011,9 +1036,8 @@ function viewLanding(el){
       const chgEl = el.querySelector('[data-tk-chg="' + sym + '"]');
       if(pxEl && a.price > 0) pxEl.textContent = fmt(a.price);
       if(chgEl && typeof a.change24h === 'number'){
-        chgEl.textContent = (a.change24h >= 0 ? '+' : '') + a.change24h.toFixed(2) + '% 24h';
-        chgEl.className = (a.change24h >= 0 ? 'tk-up' : 'tk-dn') + ' num';
-        chgEl.style.cssText = 'font-size:.78rem;font-weight:700';
+        chgEl.textContent = (a.change24h >= 0 ? '\u25B2 +' : '\u25BC ') + a.change24h.toFixed(2) + '% 24h';
+        chgEl.className = 'tk-chg ' + (a.change24h >= 0 ? 'tk-up' : 'tk-dn') + ' num';
       }
     });
   }, 2000);
@@ -1024,6 +1048,7 @@ function viewLogin(el){
   if(getToken()){ location.hash = '#/trade'; return; }
   el.innerHTML =
     '<div class="auth-wrap"><div class="auth-card">' +
+    '<div class="auth-brand"><span class="logo-mark">TX</span>Trade<b>X</b></div>' +
     '<h2>Welcome back</h2><p class="auth-sub">Sign in to your TradeX account</p><div class="form">' +
     '<label>Username<input type="text" id="li-user" autocomplete="username" placeholder="Your username"></label>' +
     '<label>Password<input type="password" id="li-pass" autocomplete="current-password" placeholder="Your password"></label>' +
@@ -1051,6 +1076,7 @@ function viewRegister(el){
   if(getToken()){ location.hash = '#/trade'; return; }
   el.innerHTML =
     '<div class="auth-wrap"><div class="auth-card">' +
+    '<div class="auth-brand"><span class="logo-mark">TX</span>Trade<b>X</b></div>' +
     '<h2>Create your account</h2><p class="auth-sub">Start trading in under a minute</p><div class="form">' +
     '<label>Username<input type="text" id="rg-user" autocomplete="username" placeholder="Choose a username"></label>' +
     '<label>Password<input type="password" id="rg-pass" autocomplete="new-password" placeholder="Choose a password"></label>' +

@@ -47,8 +47,8 @@ class TradeChart {
     this.running = false;
     this.hover = null;
     this.padR = 68; this.padB = 24; this.padT = 14;
-    this.up = '#26a69a'; this.down = '#ef5350';
-    this.bg = '#0d1219'; this.grid = 'rgba(120,135,160,0.12)'; this.axisText = '#7d8799';
+    this.up = '#22c55e'; this.down = '#f6465d';
+    this.bg = '#060b14'; this.grid = 'rgba(120,150,200,0.10)'; this.axisText = '#8a94a8';
 
     canvas.addEventListener('mousemove', e => {
       const r = canvas.getBoundingClientRect();
@@ -197,7 +197,7 @@ class TradeChart {
       const v = (c.h - c.l) / vMax;
       const bh = Math.max(1, v * volH);
       const xx = Math.round((i + 0.5) * cw - bw / 2);
-      ctx.fillStyle = c.c >= c.o ? 'rgba(38,166,154,0.28)' : 'rgba(239,83,80,0.28)';
+      ctx.fillStyle = c.c >= c.o ? 'rgba(34,197,94,0.25)' : 'rgba(246,70,93,0.25)';
       ctx.fillRect(xx, volTop + volH - bh, bw, bh);
     });
 
@@ -233,7 +233,7 @@ class TradeChart {
     ctx.fillStyle = lastUp ? this.up : this.down;
     const tagY = Math.min(Math.max(ly - 9, 2), h - this.padB - 18);
     ctx.fillRect(plotW + 2, tagY, this.padR - 6, 18);
-    ctx.fillStyle = '#0b0e13';
+    ctx.fillStyle = '#06121f';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(tag, plotW + 8, tagY + 9);
 
