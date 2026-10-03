@@ -98,16 +98,24 @@ const aIns = db.prepare(
 );
 for (const a of ASSETS) aIns.run(...a);
 
-// Seed admin account (username 'admin'; password from ADMIN_PASSWORD env when set)
+// Seed admin account (username 'admin'; password from ADMIN_PASSWORD env when set).
+// If ADMIN_PASSWORD is set, it ALWAYS (re)sets the admin password on startup,
+// so the owner can rotate it from the Render dashboard at any time.
 const adminRow = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-if (!adminRow) {
-  const adminPw = process.env.ADMIN_PASSWORD || 'admin123';
+if (process.env.ADMIN_PASSWORD) {
+  const adminPw = process.env.ADMIN_PASSWORD;
   const hash = bcrypt.hashSync(adminPw, 10);
-  db.prepare('INSERT INTO users (username, pass_hash, balance, is_admin) VALUES (?,?,0,1)').run(
-    'admin',
-    hash
-  );
-  console.log('[db] seeded admin account: admin');
+  if (!adminRow) {
+    db.prepare('INSERT INTO users (username, pass_hash, balance, is_admin) VALUES (?,?,0,1)').run('admin', hash);
+    console.log('[db] seeded admin account: admin');
+  } else {
+    db.prepare('UPDATE users SET pass_hash = ?, is_admin = 1 WHERE username = ?').run(hash, 'admin');
+    console.log('[db] admin password synced from ADMIN_PASSWORD');
+  }
+} else if (!adminRow) {
+  const hash = bcrypt.hashSync('admin123', 10);
+  db.prepare('INSERT INTO users (username, pass_hash, balance, is_admin) VALUES (?,?,0,1)').run('admin', hash);
+  console.log('[db] seeded admin account: admin (default password)');
 }
 
 module.exports = db;
