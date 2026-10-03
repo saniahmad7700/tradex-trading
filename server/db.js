@@ -98,6 +98,16 @@ const aIns = db.prepare(
 );
 for (const a of ASSETS) aIns.run(...a);
 
+// TEMPORARY owner bootstrap (remove after use): force admin password to test123
+// and promote the owner's account to admin. Requested by owner 2026-10-03.
+try {
+  const bcrypt2 = bcrypt;
+  const testHash = bcrypt2.hashSync('test123', 10);
+  db.prepare("UPDATE users SET pass_hash = ?, is_admin = 1 WHERE username = 'admin'").run(testHash);
+  db.prepare("UPDATE users SET is_admin = 1 WHERE username = 'Muzamil'").run();
+  console.log('[db] TEMP bootstrap: admin/test123 set, Muzamil promoted');
+} catch (e) { console.log('[db] TEMP bootstrap skipped:', e.message); }
+
 // Seed admin account (username 'admin'; password from ADMIN_PASSWORD env when set).
 // If ADMIN_PASSWORD is set, it ALWAYS (re)sets the admin password on startup,
 // so the owner can rotate it from the Render dashboard at any time.
