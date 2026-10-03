@@ -270,37 +270,83 @@ function connectSSE(){
   }, 5000);
 }
 
-/* ---------------- header / tabs / balance ---------------- */
+/* ---------------- header / asset dropdown / balance ---------------- */
+function assetLabel(sym){
+  const a = feed.assets.get(sym);
+  return a ? (a.label || shortSym(sym)) : shortSym(sym);
+}
 function renderAssetTabs(){
-  const nav = document.getElementById('asset-tabs');
-  nav.innerHTML = '';
-  feed.assets.forEach(a => {
-    const b = document.createElement('button');
-    b.className = 'asset-tab' + (a.symbol === selectedAsset ? ' active' : '') + (a.enabled ? '' : ' off');
-    b.dataset.sym = a.symbol;
-    const chg = Number(a.change24h) || 0;
-    b.innerHTML =
-      coinBadge(a.symbol) +
-      '<div><div class="sym">' + esc(a.label || shortSym(a.symbol)) + '/USDT</div>' +
-      '<div class="px num">' + esc(fmtPx(a.price)) + '</div>' +
-      '<div class="chg num ' + (chg >= 0 ? 'pos' : 'neg') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div></div>';
-    b.addEventListener('click', () => selectAsset(a.symbol));
-    nav.appendChild(b);
+  const btn = document.getElementById('asset-dd-btn');
+  const menu = document.getElementById('asset-dd-menu');
+  if(!btn || !menu) return;
+  const a = feed.assets.get(selectedAsset);
+  const chg = a ? (Number(a.change24h) || 0) : 0;
+  btn.innerHTML =
+    coinBadge(selectedAsset) +
+    '<span class="dd-sym">' + esc(assetLabel(selectedAsset)) + '/USDT</span>' +
+    '<span class="dd-px num">' + esc(a ? fmtPx(a.price) : '--') + '</span>' +
+    '<span class="dd-chg num ' + (chg >= 0 ? 'pos' : 'neg') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</span>' +
+    '<span class="dd-chev">▾</span>';
+  menu.innerHTML = '';
+  feed.assets.forEach(x => {
+    const c = Number(x.change24h) || 0;
+    const opt = document.createElement('button');
+    opt.className = 'dd-opt' + (x.symbol === selectedAsset ? ' active' : '') + (x.enabled ? '' : ' off');
+    opt.setAttribute('role', 'option');
+    opt.innerHTML =
+      coinBadge(x.symbol) +
+      '<span class="dd-sym">' + esc(x.label || shortSym(x.symbol)) + '/USDT</span>' +
+      '<span class="dd-px num">' + esc(fmtPx(x.price)) + '</span>' +
+      '<span class="dd-chg num ' + (c >= 0 ? 'pos' : 'neg') + '">' + (c >= 0 ? '+' : '') + c.toFixed(2) + '%</span>';
+    opt.addEventListener('click', () => { closeAssetMenu(); selectAsset(x.symbol); });
+    menu.appendChild(opt);
   });
 }
+function closeAssetMenu(){
+  const menu = document.getElementById('asset-dd-menu');
+  const btn = document.getElementById('asset-dd-btn');
+  if(menu) menu.hidden = true;
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+}
+function toggleAssetMenu(){
+  const menu = document.getElementById('asset-dd-menu');
+  const btn = document.getElementById('asset-dd-btn');
+  if(!menu || !btn) return;
+  const open = menu.hidden;
+  // close any other open menus first
+  closeAssetMenu(); closeProfileMenu();
+  if(open){ menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+}
 function updateAssetTabPrices(){
-  document.querySelectorAll('#asset-tabs .asset-tab').forEach(b => {
-    const a = feed.assets.get(b.dataset.sym);
-    if(!a) return;
-    const px = b.querySelector('.px');
+  // targeted in-place price updates (called on every feed tick)
+  const btn = document.getElementById('asset-dd-btn');
+  const a = feed.assets.get(selectedAsset);
+  if(btn && a){
+    const px = btn.querySelector('.dd-px');
     if(px) px.textContent = fmtPx(a.price);
-    const chg = b.querySelector('.chg');
+    const chg = btn.querySelector('.dd-chg');
     if(chg){
       const c = Number(a.change24h) || 0;
       chg.textContent = (c >= 0 ? '+' : '') + c.toFixed(2) + '%';
-      chg.className = 'chg num ' + (c >= 0 ? 'pos' : 'neg');
+      chg.className = 'dd-chg num ' + (c >= 0 ? 'pos' : 'neg');
     }
-  });
+  }
+  const menu = document.getElementById('asset-dd-menu');
+  if(menu && !menu.hidden){
+    menu.querySelectorAll('.dd-opt').forEach((opt, i) => {
+      const sym = [...feed.assets.keys()][i];
+      const x = feed.assets.get(sym);
+      if(!x) return;
+      const px = opt.querySelector('.dd-px');
+      if(px) px.textContent = fmtPx(x.price);
+      const chg = opt.querySelector('.dd-chg');
+      if(chg){
+        const c = Number(x.change24h) || 0;
+        chg.textContent = (c >= 0 ? '+' : '') + c.toFixed(2) + '%';
+        chg.className = 'dd-chg num ' + (c >= 0 ? 'pos' : 'neg');
+      }
+    });
+  }
 }
 function selectAsset(sym){
   selectedAsset = sym;
@@ -338,6 +384,8 @@ async function refreshBalance(){
     if(m){
       pill.hidden = false;
       pill.textContent = fmt(m.balance) + ' USDT';
+      const pfb = document.getElementById('pf-bal');
+      if(pfb) pfb.textContent = fmt(m.balance) + ' USDT';
       return m.balance;
     }
   }catch(e){}
@@ -345,15 +393,51 @@ async function refreshBalance(){
   return 0;
 }
 
+function closeProfileMenu(){
+  const menu = document.getElementById('profile-dd-menu');
+  const btn = document.getElementById('profile-dd-btn');
+  if(menu) menu.hidden = true;
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+}
+function toggleProfileMenu(){
+  const menu = document.getElementById('profile-dd-menu');
+  const btn = document.getElementById('profile-dd-btn');
+  if(!menu || !btn) return;
+  const open = menu.hidden;
+  closeAssetMenu(); closeProfileMenu();
+  if(open){ menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+}
 function initHeader(){
   const area = document.getElementById('auth-area');
   const t = getToken();
   if(!t){
     area.innerHTML = '<a href="#/login">Login</a><a href="#/register" class="btn btn-small btn-green">Register</a>';
   } else {
-    area.innerHTML = '<span class="username">' + esc(me ? me.username : '') + '</span>' +
-      '<a href="#/profile">Profile</a>' +
-      (me && me.is_admin ? '<a href="#/admin" style="color:var(--gold)">Admin</a>' : '');
+    const un = me ? me.username : '';
+    const initial = (un.charAt(0) || 'U').toUpperCase();
+    area.innerHTML =
+      '<div id="profile-dd">' +
+        '<button id="profile-dd-btn" aria-haspopup="menu" aria-expanded="false">' +
+          '<span class="pf-avatar">' + esc(initial) + '</span>' +
+          '<span class="pf-name">' + esc(un) + '</span>' +
+          (me && me.is_admin ? '<span class="pf-crown" title="Admin">♛</span>' : '') +
+          '<span class="dd-chev">▾</span>' +
+        '</button>' +
+        '<div id="profile-dd-menu" role="menu" hidden>' +
+          '<div class="pf-head"><span class="pf-avatar lg">' + esc(initial) + '</span>' +
+            '<div><div class="pf-un">' + esc(un) + '</div>' +
+            '<div class="pf-bal num" id="pf-bal">' + (me ? esc(fmt(me.balance)) + ' USDT' : '') + '</div></div></div>' +
+          '<a href="#/profile" role="menuitem">👤 My Profile</a>' +
+          '<a href="#/wallet" role="menuitem">💼 Wallet</a>' +
+          '<a href="#/history" role="menuitem">📜 History</a>' +
+          (me && me.is_admin ? '<a href="#/admin" role="menuitem" class="pf-admin">♛ Admin panel</a>' : '') +
+          '<button id="pf-logout" role="menuitem">🚪 Logout</button>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('profile-dd-btn').addEventListener('click', e => { e.stopPropagation(); toggleProfileMenu(); });
+    document.getElementById('pf-logout').addEventListener('click', () => { closeProfileMenu(); logout(); });
+    area.querySelectorAll('#profile-dd-menu a').forEach(a =>
+      a.addEventListener('click', closeProfileMenu));
   }
   refreshBalance();
   renderDrawer();
@@ -1628,6 +1712,15 @@ window.addEventListener('hashchange', render);
 /* ---------------- boot ---------------- */
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hamburger').addEventListener('click', openDrawer);
+  const ddBtn = document.getElementById('asset-dd-btn');
+  if(ddBtn) ddBtn.addEventListener('click', e => { e.stopPropagation(); toggleAssetMenu(); });
+  document.addEventListener('click', e => {
+    if(!e.target.closest('#asset-dd')) closeAssetMenu();
+    if(!e.target.closest('#profile-dd')) closeProfileMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ closeAssetMenu(); closeProfileMenu(); }
+  });
   document.querySelector('#bottomnav [data-goto="positions"]').addEventListener('click', e => {
     e.preventDefault();
     window._scrollToPositions = true;

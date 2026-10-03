@@ -77,28 +77,90 @@ h3{margin:0 0 10px;font-size:1.02rem}
 @keyframes ping{0%{transform:scale(.5);opacity:.7}80%,100%{transform:scale(1.25);opacity:0}}
 .hamburger{background:rgba(20,28,46,.6);border:1px solid var(--border);color:var(--text);border-radius:10px;font-size:1.1rem;line-height:1;padding:8px 12px;cursor:pointer;transition:.15s}
 .hamburger:hover{border-color:rgba(240,185,11,.4)}
-#asset-tabs{display:flex;gap:8px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding:2px}
-#asset-tabs::-webkit-scrollbar{display:none}
-.asset-tab{
-  flex:0 0 auto;display:flex;align-items:center;gap:9px;
+/* ---------- asset dropdown ---------- */
+#asset-dd{position:relative;flex:0 0 auto}
+#asset-dd-btn{
+  display:flex;align-items:center;gap:9px;
   background:var(--card);border:1px solid var(--border);
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   border-radius:14px;color:var(--text);cursor:pointer;
-  padding:7px 13px 7px 8px;text-align:left;line-height:1.3;min-width:132px;
-  transition:border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+  padding:7px 13px 7px 8px;line-height:1.3;min-width:190px;
+  transition:border-color .15s ease, box-shadow .15s ease;
 }
-.asset-tab:hover{border-color:rgba(240,185,11,.35)}
-.asset-tab:active{transform:scale(.97)}
-.asset-tab .sym{font-weight:800;font-size:.82rem;letter-spacing:.3px}
-.asset-tab .px{font-size:.85rem;color:var(--text);font-weight:700}
-.asset-tab .chg{font-size:.72rem;font-weight:800}
-.asset-tab.active{
-  border-color:rgba(240,185,11,.55);
-  background:linear-gradient(180deg,rgba(46,36,10,.55),rgba(24,22,12,.6));
+#asset-dd-btn:hover{border-color:rgba(240,185,11,.45);box-shadow:var(--glow-gold)}
+#asset-dd-btn .dd-sym{font-weight:800;font-size:.82rem;letter-spacing:.3px;white-space:nowrap}
+#asset-dd-btn .dd-px{font-size:.85rem;font-weight:700;margin-left:auto}
+#asset-dd-btn .dd-chg{font-size:.72rem;font-weight:800}
+#asset-dd-btn .dd-chev{color:var(--muted);font-size:.75rem;transition:transform .15s}
+#asset-dd-btn[aria-expanded="true"] .dd-chev{transform:rotate(180deg)}
+#asset-dd-menu{
+  position:absolute;top:calc(100% + 8px);left:0;min-width:280px;max-height:380px;overflow-y:auto;
+  background:rgba(10,15,26,.97);border:1px solid var(--border);border-radius:16px;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:0 18px 50px rgba(0,0,0,.55), var(--glow-gold);
+  padding:6px;z-index:100;
+}
+.dd-opt{
+  display:flex;align-items:center;gap:10px;width:100%;
+  background:transparent;border:0;border-radius:12px;color:var(--text);cursor:pointer;
+  padding:9px 10px;text-align:left;transition:background .12s;
+}
+.dd-opt:hover{background:rgba(240,185,11,.08)}
+.dd-opt.active{background:rgba(240,185,11,.14);box-shadow:inset 0 0 0 1px rgba(240,185,11,.4)}
+.dd-opt.off{opacity:.5}
+.dd-opt .dd-sym{font-weight:700;font-size:.82rem}
+.dd-opt .dd-px{font-size:.82rem;font-weight:700;margin-left:auto}
+.dd-opt .dd-chg{font-size:.72rem;font-weight:800;min-width:58px;text-align:right}
+.dd-chg.pos{color:var(--up)} .dd-chg.neg{color:var(--down)}
+
+/* ---------- premium profile dropdown ---------- */
+#profile-dd{position:relative;flex:0 0 auto}
+#profile-dd-btn{
+  display:flex;align-items:center;gap:9px;cursor:pointer;
+  background:linear-gradient(135deg,rgba(46,36,10,.65),rgba(24,22,12,.7));
+  border:1px solid rgba(240,185,11,.45);border-radius:999px;
+  padding:5px 13px 5px 5px;color:var(--text);
   box-shadow:var(--glow-gold), inset 0 1px 0 rgba(255,255,255,.1);
+  transition:transform .12s, box-shadow .15s;
 }
-.asset-tab.off{opacity:.5}
-.chg.pos{color:var(--up)} .chg.neg{color:var(--down)}
+#profile-dd-btn:hover{box-shadow:0 0 22px rgba(240,185,11,.35), inset 0 1px 0 rgba(255,255,255,.14)}
+#profile-dd-btn:active{transform:scale(.97)}
+.pf-avatar{
+  width:30px;height:30px;border-radius:50%;flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:.85rem;color:#1a1206;
+  background:linear-gradient(135deg,var(--gold2),var(--gold) 60%,#d99a06);
+  box-shadow:0 2px 8px rgba(240,185,11,.4);
+}
+.pf-avatar.lg{width:42px;height:42px;font-size:1.1rem}
+.pf-name{font-weight:800;font-size:.85rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-crown{color:var(--gold2);font-size:.9rem;filter:drop-shadow(0 1px 4px rgba(240,185,11,.6))}
+#profile-dd-btn .dd-chev{color:var(--gold2);font-size:.7rem}
+#profile-dd-menu{
+  position:absolute;top:calc(100% + 8px);right:0;min-width:230px;
+  background:rgba(10,15,26,.97);border:1px solid rgba(240,185,11,.3);border-radius:16px;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:0 18px 50px rgba(0,0,0,.55);
+  padding:8px;z-index:100;
+}
+#profile-dd-menu .pf-head{
+  display:flex;align-items:center;gap:11px;
+  padding:10px;border-bottom:1px solid var(--border-soft);margin-bottom:6px;
+}
+#profile-dd-menu .pf-un{font-weight:800;font-size:.9rem}
+#profile-dd-menu .pf-bal{color:#4ade80;font-weight:700;font-size:.8rem;margin-top:2px}
+#profile-dd-menu a, #profile-dd-menu button{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  background:transparent;border:0;border-radius:10px;color:var(--text);
+  padding:10px 12px;font-size:.85rem;font-weight:600;cursor:pointer;text-decoration:none;
+  transition:background .12s;
+}
+#profile-dd-menu a:hover, #profile-dd-menu button:hover{background:rgba(240,185,11,.1)}
+#profile-dd-menu .pf-admin{color:var(--gold2);font-weight:800}
+#pf-logout{color:#f87171}
+
+/* legacy tab styles kept harmless (dropdown replaced #asset-tabs) */
+#asset-tabs{display:none}
 .coin-badge{
   width:32px;height:32px;border-radius:50%;flex:0 0 auto;
   display:inline-flex;align-items:center;justify-content:center;
@@ -559,21 +621,15 @@ body.demo-on #topbar{border-bottom:2px solid rgba(240,185,11,.5)}
 .mkt-go{color:var(--gold2);font-size:1.4rem;font-weight:900;opacity:.7}
 
 /* ---------- mobile fixes (Task 5) ---------- */
-@media(max-width:1100px){
-  /* small desktop/tablet: asset tabs drop to full-width second row so
-     balance pill + auth links never get squeezed or overlap */
-  .topbar-inner{flex-wrap:wrap;row-gap:8px}
-  #asset-tabs{flex:1 1 100%;order:10;min-width:0}
-  .username{display:none}
-  #auth-area{gap:8px}
-}
 @media(max-width:767px){
   /* (a) header compacts: tabs drop to a full-width second row, username hidden */
   .topbar-inner{flex-wrap:wrap;row-gap:8px;padding:8px 10px}
-  #asset-tabs{flex:1 1 100%;order:10;min-width:0}
+  #asset-dd{flex:1 1 100%;order:10}
+  #asset-dd-btn{width:100%;justify-content:flex-start}
+  #asset-dd-menu{left:0;right:0;min-width:0}
   .logo{font-size:1.12rem}
   .logo-mark{width:28px;height:28px;font-size:.62rem}
-  .username{display:none}
+  .pf-name{max-width:80px}
   #auth-area{gap:8px}
   #auth-area a{font-size:.8rem}
   #bal-pill{font-size:.75rem;padding:6px 11px}
