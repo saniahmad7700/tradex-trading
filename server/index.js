@@ -19,6 +19,7 @@ app.use('/api/trade', trading(db, H, feed));
 // Admin router is mounted at /api but scoped to /admin inside (so unmatched
 // /api/* requests fall through instead of 401ing in adminRequired).
 app.use('/api', require('./admin')(db, H, feed));
+app.use('/api', require('./chat')());
 
 // Public price snapshot
 app.get('/api/prices', (req, res) => res.json(feed.getSnapshot()));
