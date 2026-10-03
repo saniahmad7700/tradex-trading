@@ -9,10 +9,20 @@
 // staleness tracking, tick listeners (for SSE), and hot-switching.
 const WebSocket = require('ws');
 
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'];
-const SEEDS = { BTCUSDT: 97500, ETHUSDT: 3420, BNBUSDT: 695 };
-const VOLS = { BTCUSDT: 0.0004, ETHUSDT: 0.0006, BNBUSDT: 0.0008 };
-const COINBASE_MAP = { 'BTC-USD': 'BTCUSDT', 'ETH-USD': 'ETHUSDT', 'BNB-USD': 'BNBUSDT' };
+const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT', 'TRXUSDT'];
+const SEEDS = {
+  BTCUSDT: 97500, ETHUSDT: 3420, BNBUSDT: 695,
+  SOLUSDT: 210, XRPUSDT: 0.62, DOGEUSDT: 0.16, ADAUSDT: 0.55, TRXUSDT: 0.27,
+};
+const VOLS = {
+  BTCUSDT: 0.0004, ETHUSDT: 0.0006, BNBUSDT: 0.0008,
+  SOLUSDT: 0.0008, XRPUSDT: 0.0008, DOGEUSDT: 0.0008, ADAUSDT: 0.0008, TRXUSDT: 0.0008,
+};
+// TRX has no Coinbase USD pair, so it is intentionally unmapped (simulated feed covers it).
+const COINBASE_MAP = {
+  'BTC-USD': 'BTCUSDT', 'ETH-USD': 'ETHUSDT', 'BNB-USD': 'BNBUSDT',
+  'SOL-USD': 'SOLUSDT', 'XRP-USD': 'XRPUSDT', 'DOGE-USD': 'DOGEUSDT', 'ADA-USD': 'ADAUSDT',
+};
 const CANDLE_MS = 5000;
 const MAX_CANDLES = 400;
 const STALE_MS = 10000;
@@ -28,6 +38,14 @@ const candles = {}; // symbol -> [{ t, o, h, l, c }]
 const tickListeners = new Set();
 
 const r2 = (n) => Math.round(Number(n) * 100) / 100;
+// Precision-aware rounding for simulated ticks: sub-$1 coins need more
+// decimals or their random walk would round to a flat line.
+const rPx = (n) => {
+  n = Number(n);
+  const d = n >= 1 ? 2 : n >= 0.1 ? 4 : 6;
+  const f = Math.pow(10, d);
+  return Math.round(n * f) / f;
+};
 
 function getSetting(key) {
   const r = dbRef.prepare('SELECT value FROM settings WHERE key = ?').get(key);
@@ -38,7 +56,7 @@ function providerUrl(name) {
   const override = (getSetting('feed_ws_url') || '').trim();
   if (override) return override;
   if (name === 'binance')
-    return 'wss://stream.binance.com:9443/stream?streams=btcusdt@miniTicker/ethusdt@miniTicker/bnbusdt@miniTicker';
+    return 'wss://stream.binance.com:9443/stream?streams=btcusdt@miniTicker/ethusdt@miniTicker/bnbusdt@miniTicker/solusdt@miniTicker/xrpusdt@miniTicker/dogeusdt@miniTicker/adausdt@miniTicker/trxusdt@miniTicker';
   if (name === 'coinbase') return 'wss://ws-feed.exchange.coinbase.com';
   return null;
 }
@@ -133,7 +151,7 @@ function connectCoinbase(url) {
     ws.send(
       JSON.stringify({
         type: 'subscribe',
-        product_ids: ['BTC-USD', 'ETH-USD', 'BNB-USD'],
+        product_ids: Object.keys(COINBASE_MAP),
         channels: ['ticker'],
       })
     );
@@ -162,7 +180,7 @@ function connectSimulated() {
   simTimer = setInterval(() => {
     for (const s of SYMBOLS) {
       const prev = latest[s] ? latest[s].price : SEEDS[s];
-      const next = r2(prev * (1 + VOLS[s] * (Math.random() * 2 - 1)));
+      const next = rPx(prev * (1 + VOLS[s] * (Math.random() * 2 - 1)));
       pushTick(s, next);
     }
   }, 700);

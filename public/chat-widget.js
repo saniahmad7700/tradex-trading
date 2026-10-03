@@ -46,6 +46,19 @@
   btn.addEventListener('click', function () { toggle(); });
   panel.querySelector('#tx-chat-close').addEventListener('click', function () { toggle(false); });
 
+  // Only show the widget on the landing page (#/home or empty hash).
+  function onHome(){
+    var h = location.hash || '';
+    return h === '' || h === '#/home' || h.indexOf('#/home?') === 0;
+  }
+  function syncVisibility(){
+    var show = onHome();
+    btn.style.display = show ? '' : 'none';
+    if(!show) panel.classList.remove('open');
+  }
+  window.addEventListener('hashchange', syncVisibility);
+  syncVisibility();
+
   // Show which brain is active (ai vs smart)
   fetch('/api/chat/mode').then(function (r) { return r.json(); }).then(function (j) {
     panel.querySelector('#tx-chat-mode').textContent = j.mode === 'ai' ? 'AI online' : 'online';

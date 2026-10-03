@@ -16,6 +16,16 @@ const TF_OPTS = [30, 60, 300];
 /* ---------------- helpers ---------------- */
 const r2 = n => Math.round(Number(n) * 100) / 100;
 const fmt = n => Number(n).toFixed(2);
+/* Price formatting with adaptive decimals: sub-$1 coins (XRP/DOGE/ADA/TRX)
+ * need more decimals or they would all render as 0.16 etc. Balances and
+ * amounts keep using fmt (2dp). */
+const fmtPx = n => {
+  n = Number(n);
+  if(!(n > 0)) return '0.00';
+  if(n >= 1) return n.toFixed(2);
+  if(n >= 0.1) return n.toFixed(4);
+  return n.toFixed(6);
+};
 const getToken = () => localStorage.getItem(TX_TOKEN);
 
 function esc(s){
@@ -40,6 +50,11 @@ function coinBadge(sym){
   if(s.indexOf('BTC') === 0) return '<span class="coin-badge cb-btc">\u20BF</span>';
   if(s.indexOf('ETH') === 0) return '<span class="coin-badge cb-eth">\u039E</span>';
   if(s.indexOf('BNB') === 0) return '<span class="coin-badge cb-bnb">B</span>';
+  if(s.indexOf('SOL') === 0) return '<span class="coin-badge cb-sol">S</span>';
+  if(s.indexOf('XRP') === 0) return '<span class="coin-badge cb-xrp">X</span>';
+  if(s.indexOf('DOGE') === 0) return '<span class="coin-badge cb-doge">\u00D0</span>';
+  if(s.indexOf('ADA') === 0) return '<span class="coin-badge cb-ada">A</span>';
+  if(s.indexOf('TRX') === 0) return '<span class="coin-badge cb-trx">T</span>';
   const ch = shortSym(sym).charAt(0).toUpperCase() || '?';
   return '<span class="coin-badge cb-def">' + esc(ch) + '</span>';
 }
@@ -267,7 +282,7 @@ function renderAssetTabs(){
     b.innerHTML =
       coinBadge(a.symbol) +
       '<div><div class="sym">' + esc(a.label || shortSym(a.symbol)) + '/USDT</div>' +
-      '<div class="px num">' + esc(fmt(a.price)) + '</div>' +
+      '<div class="px num">' + esc(fmtPx(a.price)) + '</div>' +
       '<div class="chg num ' + (chg >= 0 ? 'pos' : 'neg') + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</div></div>';
     b.addEventListener('click', () => selectAsset(a.symbol));
     nav.appendChild(b);
@@ -278,7 +293,7 @@ function updateAssetTabPrices(){
     const a = feed.assets.get(b.dataset.sym);
     if(!a) return;
     const px = b.querySelector('.px');
-    if(px) px.textContent = fmt(a.price);
+    if(px) px.textContent = fmtPx(a.price);
     const chg = b.querySelector('.chg');
     if(chg){
       const c = Number(a.change24h) || 0;
@@ -666,8 +681,8 @@ function renderPositions(){
       ' ' + esc(shortSym(p.asset)) + '</span>' + (p.demo ? '<span class="demo-tag">DEMO</span>' : '') +
       '<span class="pos-pnl ' + pnlCls + ' num">' + pnlTxt + ' USDT</span></div>' +
       '<div class="pos-meta"><span>Amount <b class="num">' + fmt(p.amount) + '</b></span>' +
-      '<span>Entry <b class="num">' + fmt(p.entry_price) + '</b></span>' +
-      '<span>Live <b class="num">' + fmt(live.cur) + '</b></span>' +
+      '<span>Entry <b class="num">' + fmtPx(p.entry_price) + '</b></span>' +
+      '<span>Live <b class="num">' + fmtPx(live.cur) + '</b></span>' +
       '<span>Payout <b class="num">' + (p.payout || payoutFor(p.asset, p.timeframe)).toFixed(2) + 'x</b></span></div>' +
       '<div class="pos-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
       '<div class="pos-cd num">' + fmtMMSS(left) + ' left</div>' +
@@ -738,11 +753,11 @@ async function viewTrade(el){
   const priceTick = setInterval(() => {
     const pe = document.getElementById('panel-price');
     const av = feed.assets.get(selectedAsset);
-    if(pe && av) pe.textContent = fmt(av.price) + ' USDT';
+    if(pe && av) pe.textContent = fmtPx(av.price) + ' USDT';
     const ce = document.getElementById('chart-live');
     if(ce && av && av.price > 0){
       const chg = Number(av.change24h) || 0;
-      ce.innerHTML = fmt(av.price) + ' &nbsp;<span class="' + (chg >= 0 ? 'tk-up' : 'tk-dn') + '">' +
+      ce.innerHTML = fmtPx(av.price) + ' &nbsp;<span class="' + (chg >= 0 ? 'tk-up' : 'tk-dn') + '">' +
         (chg >= 0 ? '\u25B2 +' : '\u25BC ') + chg.toFixed(2) + '%</span>';
     }
   }, 500);
@@ -859,7 +874,7 @@ async function viewWallet(el){
     document.getElementById('demo-reset').addEventListener('click', () => { resetDemo(); viewWallet(el); });
     return;
   }
-  if(!getToken()){ location.hash = '#/login'; return; }
+  if(!getToken()){ location.hash = '#/login'; toast('Login to view your wallet'); return; }
   try{
     const info = await api('GET', '/api/wallet/info');
     const hist = await api('GET', '/api/wallet/history').catch(() => ({txs: []}));
@@ -967,7 +982,7 @@ async function viewProfile(el){
     if(lb) lb.addEventListener('click', logout);
     return;
   }
-  if(!getToken()){ location.hash = '#/login'; return; }
+  if(!getToken()){ location.hash = '#/login'; toast('Login to view your profile'); return; }
   await refreshMe();
   el.innerHTML =
     '<h2>Profile</h2>' +
@@ -980,18 +995,66 @@ async function viewProfile(el){
 
 /* ---------------- login / register ---------------- */
 /* ---------------- landing page ---------------- */
+/* Symbols shown on the landing page: all enabled feed assets, fallback list. */
+function homeSyms(){
+  const list = [];
+  feed.assets.forEach(a => { if(a.enabled) list.push(a.symbol); });
+  if(list.length) return list;
+  return ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','TRXUSDT'];
+}
+/* Mini sparkline from the candle cache (close prices). Canvas 2d, no libraries. */
+function drawSparkline(cv, closes, up){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 200, h = cv.clientHeight || 44;
+  if(cv.width !== Math.round(w * dpr)){ cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if(!closes || closes.length < 2){
+    ctx.strokeStyle = 'rgba(139,150,173,.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    return;
+  }
+  const data = closes.slice(-60);
+  let mn = Math.min.apply(null, data), mx = Math.max.apply(null, data);
+  if(mx - mn < 1e-12){ mn -= 1; mx += 1; }
+  const px = i => (i / (data.length - 1)) * (w - 4) + 2;
+  const py = v => h - 4 - ((v - mn) / (mx - mn)) * (h - 8);
+  const col = up ? '#22c55e' : '#f6465d';
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, up ? 'rgba(34,197,94,.35)' : 'rgba(246,70,93,.35)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  data.forEach((v, i) => { i ? ctx.lineTo(px(i), py(v)) : ctx.moveTo(px(i), py(v)); });
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.lineTo(px(data.length - 1), h); ctx.lineTo(px(0), h); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  // last-price dot
+  ctx.beginPath();
+  ctx.arc(px(data.length - 1), py(data[data.length - 1]), 3, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+}
+function sparkCloses(sym){
+  const buf = candleCache[sym] || [];
+  return buf.map(c => Number(c.c)).filter(v => v > 0);
+}
 function viewLanding(el){
-  const syms = ['BTCUSDT','ETHUSDT','BNBUSDT'];
-  const tickHtml = syms.map(sym => {
+  const syms = homeSyms();
+  const mktHtml = syms.map(sym => {
     const a = feed.assets.get(sym);
-    const px = a && a.price > 0 ? fmt(a.price) : '—';
+    const label = a ? (a.label || shortSym(sym)) : shortSym(sym);
+    const px = a && a.price > 0 ? fmtPx(a.price) : '—';
     const chg = a && typeof a.change24h === 'number' ? a.change24h : null;
-    const cls = chg == null ? '' : (chg >= 0 ? 'tk-up' : 'tk-dn');
-    return '<div class="ticker-item"><div class="tk-top">' + coinBadge(sym) +
-      '<div class="tk-sym">' + esc(shortSym(sym)) + ' / USDT</div></div>' +
-      '<div class="tk-px num" data-tk-px="' + sym + '">' + px + '</div>' +
-      '<div class="tk-chg ' + cls + ' num" data-tk-chg="' + sym + '">' +
-      (chg == null ? '&nbsp;' : (chg >= 0 ? '\u25B2 +' : '\u25BC ') + chg.toFixed(2) + '% 24h') + '</div></div>';
+    const up = chg == null ? true : chg >= 0;
+    return '<button class="mkt-row" data-sym="' + esc(sym) + '">' +
+      '<span class="mkt-badge">' + coinBadge(sym) + '</span>' +
+      '<span class="mkt-info"><span class="mkt-sym">' + esc(label) + ' / USDT</span>' +
+      '<span class="mkt-px num" data-mkt-px="' + sym + '">' + px + '</span></span>' +
+      '<span class="mkt-spark"><canvas data-mkt-spark="' + sym + '"></canvas></span>' +
+      '<span class="mkt-chg num ' + (chg == null ? '' : (up ? 'pos' : 'neg')) + '" data-mkt-chg="' + sym + '">' +
+      (chg == null ? '&nbsp;' : (up ? '\u25B2 +' : '\u25BC ') + chg.toFixed(2) + '%') + '</span>' +
+      '<span class="mkt-go">\u203A</span></button>';
   }).join('');
 
   el.innerHTML =
@@ -1007,11 +1070,12 @@ function viewLanding(el){
         '<a class="btn-ghost" href="#/login">Sign In</a>' +
       '</div>' +
     '</section>' +
-    '<div class="ticker-strip">' + tickHtml + '</div>' +
+    '<h2 class="sec-title">Live <span class="gold">Markets</span></h2>' +
+    '<div class="mkt-list">' + mktHtml + '</div>' +
     '<h2 class="sec-title">How it works</h2>' +
     '<div class="steps">' +
       '<div class="step-card"><span class="step-num">1</span><h4>Create your account</h4><p>Sign up in under a minute. Try the free demo with 1,000 practice credits — no deposit needed.</p></div>' +
-      '<div class="step-card"><span class="step-num">2</span><h4>Pick UP or DOWN</h4><p>Choose BTC, ETH or BNB, set your amount and timeframe — 30 seconds, 1 minute or 5 minutes.</p></div>' +
+      '<div class="step-card"><span class="step-num">2</span><h4>Pick UP or DOWN</h4><p>Choose from 8 crypto assets, set your amount and timeframe — 30 seconds, 1 minute or 5 minutes.</p></div>' +
       '<div class="step-card"><span class="step-num">3</span><h4>Win up to 1.9x</h4><p>If the price moves your way when time expires, you win. Payout is credited instantly to your wallet.</p></div>' +
     '</div>' +
     '<h2 class="sec-title">Why <span class="gold">TradeX</span></h2>' +
@@ -1028,19 +1092,33 @@ function viewLanding(el){
     '<div class="landing-foot">© 2026 TradeX</div>' +
   '</div>';
 
-  const tick = setInterval(() => {
-    syms.forEach(sym => {
+  // market row -> jump to trade with that asset selected
+  el.querySelectorAll('.mkt-row').forEach(row => row.addEventListener('click', () => {
+    const sym = row.dataset.sym;
+    if(sym && feed.assets.has(sym)){
+      selectAsset(sym);
+      location.hash = '#/trade';
+    }
+  }));
+
+  const refreshMkts = () => {
+    homeSyms().forEach(sym => {
       const a = feed.assets.get(sym);
       if(!a) return;
-      const pxEl = el.querySelector('[data-tk-px="' + sym + '"]');
-      const chgEl = el.querySelector('[data-tk-chg="' + sym + '"]');
-      if(pxEl && a.price > 0) pxEl.textContent = fmt(a.price);
+      const pxEl = el.querySelector('[data-mkt-px="' + sym + '"]');
+      const chgEl = el.querySelector('[data-mkt-chg="' + sym + '"]');
+      if(pxEl && a.price > 0) pxEl.textContent = fmtPx(a.price);
       if(chgEl && typeof a.change24h === 'number'){
-        chgEl.textContent = (a.change24h >= 0 ? '\u25B2 +' : '\u25BC ') + a.change24h.toFixed(2) + '% 24h';
-        chgEl.className = 'tk-chg ' + (a.change24h >= 0 ? 'tk-up' : 'tk-dn') + ' num';
+        const up = a.change24h >= 0;
+        chgEl.innerHTML = (up ? '\u25B2 +' : '\u25BC ') + a.change24h.toFixed(2) + '%';
+        chgEl.className = 'mkt-chg num ' + (up ? 'pos' : 'neg');
       }
+      const cv = el.querySelector('[data-mkt-spark="' + sym + '"]');
+      if(cv) drawSparkline(cv, sparkCloses(sym), (a.change24h || 0) >= 0);
     });
-  }, 2000);
+  };
+  refreshMkts();
+  const tick = setInterval(refreshMkts, 2000);
   el._cleanup = () => clearInterval(tick);
 }
 
@@ -1353,7 +1431,7 @@ async function adminSettings(box){
 
 async function viewAdmin(el){
   await refreshMe();
-  if(!me){ location.hash = '#/login'; return; }
+  if(!me){ location.hash = '#/login'; toast('Login to continue'); return; }
   if(!me.is_admin){ el.innerHTML = '<p class="denied">Access denied.</p>'; return; }
   const tabs = [
     ['overview', 'Overview'], ['users', 'Users'], ['tx', 'Transactions'],

@@ -87,6 +87,11 @@ const ASSETS = [
   ['BTCUSDT', 'Bitcoin', 1, 1.9, 1.9, 1.9],
   ['ETHUSDT', 'Ethereum', 1, 1.9, 1.9, 1.9],
   ['BNBUSDT', 'BNB', 1, 1.9, 1.9, 1.9],
+  ['SOLUSDT', 'Solana', 1, 1.9, 1.9, 1.9],
+  ['XRPUSDT', 'Ripple', 1, 1.9, 1.9, 1.9],
+  ['DOGEUSDT', 'Dogecoin', 1, 1.9, 1.9, 1.9],
+  ['ADAUSDT', 'Cardano', 1, 1.9, 1.9, 1.9],
+  ['TRXUSDT', 'Tron', 1, 1.9, 1.9, 1.9],
 ];
 const aIns = db.prepare(
   'INSERT OR IGNORE INTO assets (symbol, label, enabled, payout_30, payout_60, payout_300) VALUES (?,?,?,?,?,?)'
