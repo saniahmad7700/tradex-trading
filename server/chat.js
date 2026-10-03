@@ -14,12 +14,12 @@ const https = require('https');
 const SYSTEM_PROMPT = `You are TradeX Assistant, the helpful support bot for TradeX, a crypto trading platform website. TradeX offers: live candlestick charts for BTC, ETH, BNB; 30-second, 1-minute and 5-minute trading timeframes with Rise/Fall predictions; a demo mode with virtual credits for practice; a wallet system with deposits/withdrawals; Easypaisa, JazzCash and USDT (TRC20) payments; and an admin dashboard. Be concise, friendly, and helpful. Never give financial advice; remind users trading involves risk.`;
 
 const RULES = [
-  { k: ['demo'], r: 'Yes! TradeX has a demo mode with virtual credits — toggle between DEMO and REAL at the top of the terminal and practice risk-free before trading live.' },
+  { k: ['demo'], r: 'Yes! TradeX has a demo mode with 1,000 virtual practice credits — toggle between DEMO and REAL at the top of the terminal and practice risk-free before trading live.' },
   { k: ['deposit', 'easypaisa', 'jazzcash', 'usdt', 'payment', 'fund'], r: 'You can deposit via Easypaisa, JazzCash, or USDT (TRC20). Open the Wallet section, choose your method, and follow the steps. Minimum deposit is 10 USDT.' },
   { k: ['withdraw'], r: 'Withdrawals are processed from the Wallet section. Minimum withdrawal is 20 USDT. Processing is usually quick!' },
   { k: ['timeframe', '30s', '30 sec', '1m', '5m', 'time frame'], r: 'TradeX supports 30-second, 1-minute, and 5-minute timeframes. Pick your timeframe, set your stake, and predict Rise or Fall!' },
   { k: ['how', 'trade', 'trading', 'start', 'begin', 'play'], r: 'Easy! 1) Pick an asset (BTC, ETH, BNB). 2) Choose a timeframe (30s/1m/5m). 3) Set your stake. 4) Predict RISE or FALL. If you are right when the timer ends, you win the payout!' },
-  { k: ['payout', 'win', 'profit', 'earn', 'return'], r: 'Winning trades pay up to 95% profit on your stake (e.g. stake $10, win $9.50). Payouts vary by timeframe — check the trade panel.' },
+  { k: ['payout', 'win', 'profit', 'earn', 'return'], r: 'Winning trades pay 1.9x your stake (e.g. stake $10, get back $19). Payouts are configurable per timeframe by the admin.' },
   { k: ['asset', 'coin', 'btc', 'eth', 'bnb', 'crypto'], r: 'TradeX lists BTC/USDT, ETH/USDT, and BNB/USDT with live streaming prices and candlestick charts.' },
   { k: ['admin'], r: 'The admin dashboard lets the site owner manage users, monitor trades, set profit multipliers and limits, and view analytics.' },
   { k: ['risk', 'safe', 'scam', 'legit'], r: 'TradeX is a trading platform — all trading involves risk, so try demo mode first and never trade money you cannot afford to lose.' },
@@ -27,6 +27,14 @@ const RULES = [
   { k: ['login', 'register', 'account', 'sign up', 'signup'], r: 'Click Register at the top, choose a username and password — it takes under a minute. Then log in and start with demo mode!' },
   { k: ['hello', 'hi', 'hey', 'salam', 'aoa'], r: 'Hello! Welcome to TradeX. Ask me anything about trading, deposits, demo mode, or timeframes!' },
   { k: ['thank', 'shukriya'], r: 'You are welcome! Good luck with your trades!' },
+  { k: ['free'], r: 'TradeX demo mode is free — you get 1,000 virtual practice credits to try trading risk-free!' },
+  { k: ['minimum', 'min deposit', 'min withdraw'], r: 'Minimum deposit is 10 USDT and minimum withdrawal is 20 USDT.' },
+  { k: ['how long', 'withdrawal time', 'payout time', 'when will'], r: 'Withdrawals are usually processed quickly — often within a few hours. Track yours in the Wallet transaction history.' },
+  { k: ['pakistan', 'country', 'countries', 'available in'], r: 'TradeX works online worldwide, including Pakistan — with Easypaisa and JazzCash deposits!' },
+  { k: ['app', 'apk', 'download', 'android'], r: 'Grab the TradeX Android app (APK) from the download banner on the site — or just use the mobile website, it works great on phones!' },
+  { k: ['support', 'human', 'contact', 'agent', 'help me'], r: 'You are chatting with support right now! For account-specific issues, use the contact options in your profile menu.' },
+  { k: ['password', 'forgot'], r: 'To reset your password, please contact support through the platform and the team will help you.' },
+  { k: ['language', 'urdu', 'hindi'], r: 'The platform is in English for now. More languages may come soon!' },
 ];
 
 const FALLBACKS = [
