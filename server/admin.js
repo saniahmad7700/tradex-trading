@@ -96,6 +96,27 @@ module.exports = (db, H, feed) => {
     res.json({ user: db.prepare('SELECT id, username, banned FROM users WHERE id = ?').get(id) });
   });
 
+  // Per-user detail: profile + last 50 trades + last 50 transactions.
+  router.get('/admin/users/:id/detail', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid user id' });
+    const u = db
+      .prepare('SELECT id, username, balance, is_admin, banned, created_at FROM users WHERE id = ?')
+      .get(id);
+    if (!u) return res.status(404).json({ error: 'User not found' });
+    const trades = db
+      .prepare('SELECT * FROM trades WHERE user_id = ? ORDER BY id DESC LIMIT 50')
+      .all(id);
+    const transactions = db
+      .prepare('SELECT * FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 50')
+      .all(id);
+    res.json({
+      user: { ...u, is_admin: !!u.is_admin, banned: !!u.banned },
+      trades,
+      transactions,
+    });
+  });
+
   router.get('/admin/transactions', (req, res) => {
     const { status, kind } = req.query;
     const where = [];
@@ -117,6 +138,33 @@ module.exports = (db, H, feed) => {
       )
       .all(...params);
     res.json({ transactions: rows });
+  });
+
+  // All-users trade history: id, username (JOIN), asset, direction, timeframe, amount,
+  // entry/settle prices, payout_mult, status, pnl. Filters: ?status= & ?user_id=
+  router.get('/admin/trades', (req, res) => {
+    const where = [];
+    const params = [];
+    if (req.query.status) {
+      where.push('t.status = ?');
+      params.push(String(req.query.status));
+    }
+    if (req.query.user_id) {
+      const uid = Number(req.query.user_id);
+      if (!Number.isFinite(uid)) return res.status(400).json({ error: 'Invalid user_id' });
+      where.push('t.user_id = ?');
+      params.push(uid);
+    }
+    const rows = db
+      .prepare(
+        `SELECT t.id, t.user_id, u.username, t.asset, t.direction, t.timeframe, t.amount,
+                t.entry_price, t.settle_price, t.payout_mult, t.status, t.pnl, t.created_at
+         FROM trades t JOIN users u ON u.id = t.user_id
+         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+         ORDER BY t.id DESC LIMIT 200`
+      )
+      .all(...params);
+    res.json({ trades: rows });
   });
 
   // Atomic approve/reject via explicit transaction (node:sqlite has no db.transaction()).

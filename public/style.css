@@ -385,7 +385,15 @@ h3{margin:0 0 10px;font-size:1.02rem}
 #modal-root:empty{display:none}
 .modal-scrim{position:fixed;inset:0;z-index:110;background:rgba(2,4,9,.7);display:flex;align-items:center;justify-content:center;padding:16px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .modal{background:rgba(13,20,34,.97);border:1px solid var(--border);border-radius:18px;padding:22px;width:min(420px,94vw);box-shadow:var(--shadow-lg)}
+.modal.wide{width:min(880px,96vw);max-height:90vh;overflow-y:auto}
 .modal h3{margin-top:0}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 18px}
+.detail-grid>div{background:rgba(20,28,46,.5);border:1px solid var(--border);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:3px}
+.detail-grid .muted{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
+.detail-grid b{font-size:.92rem}
+.modal h4{margin:18px 0 8px;color:var(--gold2)}
+.tbl.compact{font-size:.78rem}
+.tbl.compact th,.tbl.compact td{padding:7px 9px}
 .loading{color:var(--muted);padding:24px 0;text-align:center}
 .positive{color:#4ade80;font-weight:800}
 .negative{color:#fb7185;font-weight:800}

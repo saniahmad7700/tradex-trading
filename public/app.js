@@ -1256,6 +1256,7 @@ async function adminUsers(box, q){
           '<td class="num">' + fmt(u.balance) + '</td>' +
           '<td class="' + (banned ? 'st-banned' : 'st-active') + '">' + (banned ? 'BANNED' : 'ACTIVE') + '</td>' +
           '<td class="row-actions">' +
+          '<button class="btn btn-small" data-act="view" data-id="' + esc(u.id) + '" data-un="' + esc(u.username) + '">View</button> ' +
           '<button class="btn btn-small" data-act="adjust" data-id="' + esc(u.id) + '" data-un="' + esc(u.username) + '">Adjust</button> ' +
           '<button class="btn btn-small ' + (banned ? 'btn-green' : 'btn-danger') + '" data-act="ban" data-id="' + esc(u.id) + '" data-b="' + (banned ? 0 : 1) + '">' +
           (banned ? 'Unban' : 'Ban') + '</button></td></tr>';
@@ -1263,6 +1264,7 @@ async function adminUsers(box, q){
       list.innerHTML = s + '</table></div>';
       list.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', async () => {
         const id = b.dataset.id;
+        if(b.dataset.act === 'view'){ adminUserDetail(id, b.dataset.un); return; }
         if(b.dataset.act === 'ban'){
           b.disabled = true;
           try{
@@ -1300,35 +1302,85 @@ async function adminUsers(box, q){
   load(q);
 }
 
-async function adminTx(box){
+async function adminUserDetail(id, username){
+  const m = openModal('<h3>' + esc(username || ('User #' + id)) + '</h3><p class="loading">Loading…</p>');
+  m.classList.add('wide');
+  try{
+    const d = await api('GET', '/api/admin/users/' + encodeURIComponent(id) + '/detail');
+    const u = d.user;
+    const banned = u.banned;
+    let s = '<h3>' + esc(u.username) + '</h3>' +
+      '<div class="detail-grid">' +
+      '<div><span class="muted">ID</span><b>' + esc(u.id) + '</b></div>' +
+      '<div><span class="muted">Balance</span><b class="num">' + fmt(u.balance) + ' USDT</b></div>' +
+      '<div><span class="muted">Status</span><b class="' + (banned ? 'st-banned' : 'st-active') + '">' + (banned ? 'BANNED' : 'ACTIVE') + '</b></div>' +
+      '<div><span class="muted">Admin</span><b>' + (u.is_admin ? 'Yes' : 'No') + '</b></div>' +
+      '<div><span class="muted">Joined</span><b>' + esc(fmtDate(u.created_at)) + '</b></div>' +
+      '</div>';
+    const trades = d.trades || [];
+    s += '<h4>Trade history (' + trades.length + ')</h4>';
+    if(trades.length){
+      s += '<div class="table-wrap"><table class="tbl compact"><tr><th>ID</th><th>Asset</th><th>Dir</th><th>TF</th><th>Amt</th><th>PnL</th><th>Status</th><th>Time</th></tr>';
+      trades.forEach(t => {
+        const stt = String(t.status || 'open').toLowerCase();
+        const stCls = stt === 'void' ? 'push' : stt;
+        const pnl = Number(t.pnl);
+        const pnlCls = !Number.isFinite(pnl) ? '' : pnl > 0 ? 'st-won' : pnl < 0 ? 'st-lost' : '';
+        s += '<tr><td>' + esc(t.id) + '</td><td><b>' + esc(shortSym(t.asset)) + '</b></td>' +
+          '<td>' + esc(t.direction || '') + '</td>' +
+          '<td>' + esc(TF_LABEL[t.timeframe] || t.timeframe) + '</td>' +
+          '<td class="num">' + fmt(t.amount) + '</td>' +
+          '<td class="num ' + pnlCls + '">' + (Number.isFinite(pnl) ? (pnl > 0 ? '+' : '') + fmt(pnl) : '—') + '</td>' +
+          '<td class="st-' + esc(stCls) + '">' + esc(stt.toUpperCase()) + '</td>' +
+          '<td>' + esc(fmtDate(t.created_at)) + '</td></tr>';
+      });
+      s += '</table></div>';
+    } else s += '<p class="muted">No trades yet.</p>';
+    const txs = d.transactions || [];
+    s += '<h4>Deposits & withdrawals (' + txs.length + ')</h4>';
+    if(txs.length){
+      s += '<div class="table-wrap"><table class="tbl compact"><tr><th>ID</th><th>Kind</th><th>Method</th><th>Amount</th><th>Status</th><th>Time</th></tr>';
+      txs.forEach(t => {
+        const stt = String(t.status || 'pending').toLowerCase();
+        s += '<tr><td>' + esc(t.id) + '</td><td>' + esc(t.kind || '') + '</td>' +
+          '<td>' + esc(t.method || '') + '</td><td class="num">' + fmt(t.amount) + '</td>' +
+          '<td class="st-' + esc(stt) + '">' + esc(stt.toUpperCase()) + '</td>' +
+          '<td>' + esc(fmtDate(t.created_at)) + '</td></tr>';
+      });
+      s += '</table></div>';
+    } else s += '<p class="muted">No transactions yet.</p>';
+    s += '<div style="margin-top:16px;text-align:right"><button class="btn btn-small" id="ud-x">Close</button></div>';
+    m.innerHTML = s;
+    m.querySelector('#ud-x').addEventListener('click', closeModal);
+  }catch(e){
+    m.innerHTML = '<h3>' + esc(username || 'User') + '</h3><p class="loading">Failed to load: ' + esc(e.message) + '</p>';
+  }
+}
+
+async function adminTx(box, kind){
+  const title = kind === 'deposit' ? 'Deposits' : 'Withdrawals';
   box.innerHTML =
     '<div class="search-row">' +
     '<select id="at-status" style="flex:1;background:#0a0e14;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px">' +
     '<option value="">All statuses</option><option value="pending">Pending</option>' +
     '<option value="done">Done</option><option value="rejected">Rejected</option></select>' +
-    '<select id="at-kind" style="flex:1;background:#0a0e14;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px">' +
-    '<option value="">All kinds</option><option value="deposit">Deposit</option><option value="withdraw">Withdraw</option></select>' +
     '<button class="btn btn-small" id="at-go">Filter</button></div>' +
     '<div id="at-list"></div>';
   const list = box.querySelector('#at-list');
   const load = async () => {
-    list.innerHTML = '<p class="loading">Loading transactions…</p>';
+    list.innerHTML = '<p class="loading">Loading ' + title.toLowerCase() + '…</p>';
     try{
       const st = box.querySelector('#at-status').value;
-      const kind = box.querySelector('#at-kind').value;
-      let path = '/api/admin/transactions';
-      const qs = [];
-      if(st) qs.push('status=' + encodeURIComponent(st));
-      if(kind) qs.push('kind=' + encodeURIComponent(kind));
-      if(qs.length) path += '?' + qs.join('&');
+      let path = '/api/admin/transactions?kind=' + encodeURIComponent(kind);
+      if(st) path += '&status=' + encodeURIComponent(st);
       const d = await api('GET', path);
       const txs = d.txs || d.transactions || [];
-      if(!txs.length){ list.innerHTML = '<p class="muted">No transactions found.</p>'; return; }
-      let s = '<div class="table-wrap"><table class="tbl"><tr><th>ID</th><th>User</th><th>Kind</th><th>Amount</th><th>Ref</th><th>Date</th><th>Status</th><th>Actions</th></tr>';
+      if(!txs.length){ list.innerHTML = '<p class="muted">No ' + title.toLowerCase() + ' found.</p>'; return; }
+      let s = '<div class="table-wrap"><table class="tbl"><tr><th>ID</th><th>User</th><th>Method</th><th>Amount</th><th>Ref</th><th>Date</th><th>Status</th><th>Actions</th></tr>';
       txs.forEach(t => {
         const stt = String(t.status || 'pending').toLowerCase();
         s += '<tr><td>' + esc(t.id) + '</td><td>' + esc(t.username || t.user_id || '') + '</td>' +
-          '<td>' + esc(t.kind || '') + '</td><td class="num">' + fmt(t.amount) + '</td>' +
+          '<td>' + esc(t.method || '') + '</td><td class="num">' + fmt(t.amount) + '</td>' +
           '<td class="ref" title="' + esc(t.tx_hash || t.address || '') + '">' + esc(t.tx_hash || t.address || '') + '</td>' +
           '<td>' + esc(fmtDate(t.created_at)) + '</td>' +
           '<td class="st-' + esc(stt) + '">' + esc(stt.toUpperCase()) + '</td>' +
@@ -1349,6 +1401,54 @@ async function adminTx(box){
     }catch(e){ list.innerHTML = '<p class="loading">Failed to load transactions.</p>'; toast(e.message); }
   };
   box.querySelector('#at-go').addEventListener('click', load);
+  load();
+}
+
+async function adminTrades(box){
+  box.innerHTML =
+    '<div class="search-row">' +
+    '<select id="atr-status" style="flex:1;background:#0a0e14;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px">' +
+    '<option value="">All statuses</option><option value="open">Open</option>' +
+    '<option value="won">Won</option><option value="lost">Lost</option>' +
+    '<option value="push">Push</option><option value="void">Void</option></select>' +
+    '<button class="btn btn-small" id="atr-go">Filter</button></div>' +
+    '<div id="atr-list"></div>';
+  const list = box.querySelector('#atr-list');
+  const load = async () => {
+    list.innerHTML = '<p class="loading">Loading trades…</p>';
+    try{
+      const st = box.querySelector('#atr-status').value;
+      let path = '/api/admin/trades';
+      if(st) path += '?status=' + encodeURIComponent(st);
+      const d = await api('GET', path);
+      const trades = d.trades || [];
+      if(!trades.length){ list.innerHTML = '<p class="muted">No trades found.</p>'; return; }
+      let s = '<div class="table-wrap"><table class="tbl"><tr><th>ID</th><th>User</th><th>Asset</th><th>Dir</th><th>TF</th>' +
+        '<th>Amount</th><th>Entry</th><th>Settle</th><th>Payout</th><th>PnL</th><th>Status</th><th>Time</th></tr>';
+      trades.forEach(t => {
+        const stt = String(t.status || 'open').toLowerCase();
+        const stCls = stt === 'void' ? 'push' : stt; // void shown muted
+        const pnl = Number(t.pnl);
+        const pnlCls = !Number.isFinite(pnl) ? '' : pnl > 0 ? 'st-won' : pnl < 0 ? 'st-lost' : '';
+        const dirCls = t.direction === 'up' ? 'st-won' : t.direction === 'down' ? 'st-lost' : '';
+        const dirArrow = t.direction === 'up' ? '\u25B2 ' : t.direction === 'down' ? '\u25BC ' : '';
+        s += '<tr><td>' + esc(t.id) + '</td>' +
+          '<td>' + esc(t.username || t.user_id) + '</td>' +
+          '<td><b>' + esc(shortSym(t.asset)) + '</b></td>' +
+          '<td class="' + dirCls + '">' + dirArrow + esc(t.direction || '') + '</td>' +
+          '<td>' + esc(TF_LABEL[t.timeframe] || t.timeframe) + '</td>' +
+          '<td class="num">' + fmt(t.amount) + '</td>' +
+          '<td class="num">' + fmtPx(t.entry_price) + '</td>' +
+          '<td class="num">' + (t.settle_price != null ? fmtPx(t.settle_price) : '<span class="muted">—</span>') + '</td>' +
+          '<td class="num">' + (t.payout_mult != null ? Number(t.payout_mult).toFixed(2) + 'x' : '—') + '</td>' +
+          '<td class="num ' + pnlCls + '">' + (Number.isFinite(pnl) ? (pnl > 0 ? '+' : '') + fmt(pnl) : '<span class="muted">—</span>') + '</td>' +
+          '<td class="st-' + esc(stCls) + '">' + esc(stt.toUpperCase()) + '</td>' +
+          '<td>' + esc(fmtDate(t.created_at)) + '</td></tr>';
+      });
+      list.innerHTML = s + '</table></div>';
+    }catch(e){ list.innerHTML = '<p class="loading">Failed to load trades.</p>'; toast(e.message); }
+  };
+  box.querySelector('#atr-go').addEventListener('click', load);
   load();
 }
 
@@ -1460,7 +1560,8 @@ async function viewAdmin(el){
   if(!me){ location.hash = '#/login'; toast('Login to continue'); return; }
   if(!me.is_admin){ el.innerHTML = '<p class="denied">Access denied.</p>'; return; }
   const tabs = [
-    ['overview', 'Overview'], ['users', 'Users'], ['tx', 'Transactions'],
+    ['overview', 'Overview'], ['users', 'Users'], ['deposits', 'Deposits'],
+    ['withdrawals', 'Withdrawals'], ['trades', 'Trades'],
     ['assets', 'Assets'], ['settings', 'Settings']
   ];
   el.innerHTML =
@@ -1474,7 +1575,9 @@ async function viewAdmin(el){
     el.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     if(tab === 'overview') adminOverview(body);
     else if(tab === 'users') adminUsers(body);
-    else if(tab === 'tx') adminTx(body);
+    else if(tab === 'deposits') adminTx(body, 'deposit');
+    else if(tab === 'withdrawals') adminTx(body, 'withdraw');
+    else if(tab === 'trades') adminTrades(body);
     else if(tab === 'assets') adminAssets(body);
     else adminSettings(body);
   };
