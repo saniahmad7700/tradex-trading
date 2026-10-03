@@ -551,6 +551,14 @@ body.demo-on #topbar{border-bottom:2px solid rgba(240,185,11,.5)}
 .mkt-go{color:var(--gold2);font-size:1.4rem;font-weight:900;opacity:.7}
 
 /* ---------- mobile fixes (Task 5) ---------- */
+@media(max-width:1100px){
+  /* small desktop/tablet: asset tabs drop to full-width second row so
+     balance pill + auth links never get squeezed or overlap */
+  .topbar-inner{flex-wrap:wrap;row-gap:8px}
+  #asset-tabs{flex:1 1 100%;order:10;min-width:0}
+  .username{display:none}
+  #auth-area{gap:8px}
+}
 @media(max-width:767px){
   /* (a) header compacts: tabs drop to a full-width second row, username hidden */
   .topbar-inner{flex-wrap:wrap;row-gap:8px;padding:8px 10px}

@@ -306,6 +306,17 @@ function selectAsset(sym){
   selectedAsset = sym;
   if(chart) chart.setSymbol(sym);
   renderAssetTabs();
+  // update trade panel header + chart title (they render once per view)
+  const a = feed.assets.get(sym);
+  const label = a ? (a.label || shortSym(sym)) : shortSym(sym);
+  const tpHead = document.querySelector('.tp-head');
+  if(tpHead){
+    tpHead.innerHTML = coinBadge(sym) +
+      '<div class="tp-title"><h3>' + esc(label) + '/USDT</h3><span class="muted num" id="panel-price"></span></div>' +
+      '<span class="live-dot sm"></span>';
+  }
+  const chSym = document.querySelector('.chart-sym');
+  if(chSym) chSym.textContent = label + '/USDT';
   syncChartPositions();
   updateTradeButtons();
   renderPositions();
@@ -526,7 +537,22 @@ async function refreshRealOpen(){
     realOpen = d.trades || [];
     if(!isDemo()){
       const now = new Set(realOpen.map(t => t.id));
+      const settledIds = [...prev].filter(id => !now.has(id));
       prev.forEach(id => { if(!now.has(id) && chart) chart.removePositionMarker(id); });
+      // a trade settled -> refresh balance live + show result toast
+      if(settledIds.length){
+        refreshBalance();
+        try{
+          const h = await api('GET', '/api/trade/history?limit=5');
+          const last = (h.trades || [])[0];
+          if(last && settledIds.includes(last.id)){
+            const pnl = Number(last.pnl) || 0;
+            toast(last.status === 'won' ? 'Won +' + fmt(pnl) + ' USDT'
+              : last.status === 'push' ? 'Push — stake refunded'
+              : 'Lost ' + fmt(Math.abs(pnl)) + ' USDT');
+          }
+        }catch(e){ /* toast optional */ }
+      }
       realOpen.forEach(t => {
         if(chart && t.status === 'open'){
           chart.addPositionMarker({
